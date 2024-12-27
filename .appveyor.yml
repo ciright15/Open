@@ -28,9 +28,9 @@ environment:
 #  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 #    VCVARSALL: "%VS140COMNTOOLS%/../../VC/vcvarsall.bat"
 #    DO_PUSH_ARTIFACT: yes
-  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  #- APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   #  VCVARSALL: "%ProgramFiles(x86)%/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat"
-    DO_PUSH_ARTIFACT: yes
+   # DO_PUSH_ARTIFACT: yes
   # not compatible with WiX 3.11.2:
   # - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
   #   VCVARSALL: "%ProgramFiles(x86)%/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build/vcvarsall.bat"
