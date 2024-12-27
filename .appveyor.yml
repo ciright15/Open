@@ -18,7 +18,7 @@ configuration:
 environment:
   GH_TOKEN:
     secure: aLu3tFc7lRJbotnmnHLx/QruIHc5rLaGm1RttoEdy4QILlPXzVkCZ6loYMz0sfrY
-  PATH:  C:\cygwin\bin;%PATH%;C:\Program Files\PowerShell\7
+  PATH:  C:\cygwin\bin;%PATH%;C:\Windows\System32\WindowsPowerShell\v1.0\;%PATH%;C:\Program Files\Git\cmd
   OPENPACE_VER: 1.1.2
   ZLIB_VER_DOT: 1.2.12
   matrix:
@@ -36,7 +36,6 @@ environment:
   #   VCVARSALL: "%ProgramFiles(x86)%/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build/vcvarsall.bat"
 
 install:
- - **$Env:Path += ";C:\Program Files\PowerShell\7"**
   - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
         https://ci.appveyor.com/api/projects/$env:APPVEYOR_ACCOUNT_NAME/$env:APPVEYOR_PROJECT_SLUG/history?recordsNumber=50).builds | `
         Where-Object pullRequestId -eq $env:APPVEYOR_PULL_REQUEST_NUMBER)[0].buildNumber) { `
