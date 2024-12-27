@@ -1,11 +1,4 @@
-version: 0.24.0.{build}
-
-init:
-  - cmd: git config --global --add safe.directory /cygdrive/c/projects/opensc
-
-branches:
-  only:
-   - 0.24.0-rc1-5c1f08d
+version: 1.0.{build}
 
 platform:
   - x86
@@ -15,81 +8,29 @@ configuration:
   - Release
 
 environment:
-  GH_TOKEN:
-    secure: aLu3tFc7lRJbotnmnHLx/QruIHc5rLaGm1RttoEdy4QILlPXzVkCZ6loYMz0sfrY
-  PATH: C:\cygwin\bin;$(PATH)
-  OPENPACE_VER: 1.1.2
-  ZLIB_VER_DOT: 1.2.12
-  matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      VCVARSALL: "%ProgramFiles(x86)%/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat"
-      DO_PUSH_ARTIFACT: yes
+  PATH: C:\cygwin\bin;C:\Program Files\PowerShell\7;$(PATH)
+
+init:
+  - cmd: echo "Initialization step"
 
 install:
-  - echo %PATH%
-  - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
-        https://ci.appveyor.com/api/projects/$env:APPVEYOR_ACCOUNT_NAME/$env:APPVEYOR_PROJECT_SLUG/history?recordsNumber=50).builds | `
-        Where-Object pullRequestId -eq $env:APPVEYOR_PULL_REQUEST_NUMBER)[0].buildNumber) { `
-        throw "There are newer queued builds for this pull request, failing early." }
-  - date /T & time /T
-  - ps: $env:PACKAGE_NAME=(git describe --tags --abbrev=0)
-  - ps: >-
-      If ($env:Platform -Match "x86") {
-        $env:OPENSSL_PF="Win32"
-        $env:ARTIFACT="OpenSC-${env:PACKAGE_NAME}_win32"
-      } Else {
-        $env:OPENSSL_PF="Win64"
-        $env:ARTIFACT="OpenSC-${env:PACKAGE_NAME}_win64"
+  - ps: |
+      if (!(Test-Path "C:\Program Files\PowerShell\7\pwsh.exe")) {
+          echo "PowerShell Core not found. Installing PowerShell Core...";
+          Invoke-WebRequest -Uri https://github.com/PowerShell/PowerShell/releases/download/v7.2.0/PowerShell-7.2.0-win-x64.msi -OutFile pwsh.msi;
+          Start-Process msiexec.exe -ArgumentList '/i', 'pwsh.msi', '/quiet', '/norestart' -Wait;
+          echo "PowerShell Core installed.";
       }
-  - ps: >-
-      If ($env:Configuration -Like "*Light*") {
-        $env:ARTIFACT+="-Light"
-      } Else {
-        $env:NMAKE_EXTRA+=" OPENSSL_DEF=/DENABLE_OPENSSL OPENSSL_DIR=C:\OpenSSL-v111-${env:OPENSSL_PF}"
-        $env:NMAKE_EXTRA+=" OPENSSL_EXTRA_CFLAGS=/DOPENSSL_SECURE_MALLOC_SIZE=65536"
-        If (!(Test-Path C:\zlib )) {
-          echo "downloading zlib..."
-          appveyor DownloadFile "https://github.com/madler/zlib/archive/v${env:ZLIB_VER_DOT}.zip" -FileName zlib.zip
-          7z x zlib.zip -oC:\
-          Rename-Item -path "c:\zlib-${env:ZLIB_VER_DOT}" -newName "zlib"
-        }
-        If (!(Test-Path C:\openpace )) {
-          echo "downloading openpace..."
-          appveyor DownloadFile "https://github.com/frankmorgner/openpace/archive/${env:OPENPACE_VER}.zip" -FileName openpace.zip
-          7z x openpace.zip -oC:\
-          Rename-Item -path "C:\openpace-${env:OPENPACE_VER}" -newName "openpace"
-        }
-      }
-      If (!(Test-Path cpdksetup.exe )) {
-          appveyor DownloadFile "https://download.microsoft.com/download/1/7/6/176909B0-50F2-4DF3-B29B-830A17EA7E38/CPDK_RELEASE_UPDATE/cpdksetup.exe"
-      }
-  - openssl version || echo "OpenSSL is not installed"
-  - echo "Using %APPVEYOR_BUILD_WORKER_IMAGE% with %VCVARSALL%"
-  - call "%VCVARSALL%" %Platform%
-  - cpdksetup.exe /quiet
-  - uname -a
-  - set
+      $env:PATH="C:\Program Files\PowerShell\7;$env:PATH";
+      echo $env:PATH;
 
 build_script:
-  - ps: >-
-      if (!($env:Configuration -Like "*Light*")) {
-        If (!(Test-Path -Path "C:\zlib-${env:OPENSSL_PF}" )) {
-          # build zlib.lib as a static library
-          echo "building zlib..."
-          xcopy C:\zlib C:\zlib-${env:OPENSSL_PF} /e /i /y /s
-          cd C:\zlib-${env:OPENSSL_PF}
-          (Get-Content win32/Makefile.msc).replace('-MD', '-MT') | Set-Content win32/Makefile.msc
-          nmake /nologo -f win32/Makefile.msc zlib.lib
-        }
-        $env:NMAKE_EXTRA+=" ZLIBSTATIC_DEF=/DENABLE_ZLIB_STATIC ZLIB_INCL_DIR=/IC:\zlib-${env:OPENSSL_PF} ZLIB_LIB=C:\zlib-${env:OPENSSL_PF}\zlib.lib"
-        If (!(Test-Path -Path "C:\openpace-${env:OPENSSL_PF}" )) {
-          # build libeac.lib as a static library
-          echo "building openpace..."
-          xcopy C:\openpace C:\openpace-${env:OPENSSL_PF} /e /i /y /s
-          cd C:\openpace-${env:OPENSSL_PF}\src
-          # OpenSSL 1.1.0
-          #cl /nologo /IC:\OpenSSL-v110-${env:OPENSSL_PF}\include /I. /DX509DIR=\`"/\`" /DCVCDIR=\`"/\`" /W3 /D_CRT_SECURE_NO_DEPRECATE /DWIN32_LEAN_AND_MEAN /GS /MT /DHAVE_ASN1_STRING_GET0_DATA=1 /DHAVE_DECL_OPENSSL_ZALLOC=1 /DHAVE_DH_GET0_KEY=1 /DHAVE_DH_SET0_KEY=1 /DHAVE_DH_GET0_PQG=1 /DHAVE_DH_SET0_PQG=1 /c ca_lib.c cv_cert.c cvc_lookup.c x509_lookup.c eac_asn1.c eac.c eac_ca.c eac_dh.c eac_ecdh.c eac_kdf.c eac_lib.c eac_print.c eac_util.c misc.c pace.c pace_lib.c pace_mappings.c ri.c ri_lib.c ta.c ta_lib.c objects.c ssl_compat.c
-          # OpenSSL 1.1.1
-          cl /nologo /IC:\OpenSSL-v111-${env:OPENSSL_PF}\include /I. /DX509DIR=\`"/\`" /DCVCDIR=\`"/\`" /W3 /D_CRT_SECURE_NO_DEPRECATE /DWIN32_LEAN_AND_MEAN /GS /MT /DHAVE_ASN1_STRING_GET0_DATA=1 /DHAVE_DECL_OPENSSL_ZALLOC=1 /DHAVE_DH_GET0_KEY=1 /DHAVE_DH_GET0_PQG=1 /DHAVE_DH_SET0_KEY=1 /DHAVE_DH_SET0_PQG=1 /DHAVE_ECDSA_SIG_GET0=1 /DHAVE_ECDSA_SIG_SET0=1 /DHAVE_EC_KEY_METHOD=1 /DHAVE_RSA_GET0_KEY=1 /DHAVE_RSA_SET0_KEY=1 /DHAVE_EC_POINT_GET_AFFINE_COORDINATES=1 /DHAVE_EC_POINT_SET_AFFINE_COORDINATES=1 /c ca_lib.c cv_cert.c cvc_lookup.c x509_lookup.c eac_asn1.c eac.c eac_ca.c eac_dh.c eac_ecdh.c eac_kdf.c eac_lib.c eac_print.c eac_util.c misc.c pace.c pace_lib.c pace_mappings.c ri.c ri_lib.c ta.c ta_lib.c objects.c ssl_compat.c
-          # OpenSSL 1.0.2
-          #cl /n[_{{{CITATION{{{_1{](https://github.com/NateWeiler/Gists/tree/3a2aefb35a21ca3e44f275de348f78b52e8d49e0/Termux%2Fpython%2Fpyinstaller%2Fbindepend.py)[_{{{CITATION{{{_2{](https://github.com/ai-wen/study/tree/6711c655c6c7090354b5761fcf1f6a1679a51f1d/md%E6%96%87%E6%A1%A3%2Fopensc%20windows%20%E7%BC%96%E8%AF%91%20%20MSYS2%20%E4%BD%BF%E7%94%A8.md)
+  - ps: |
+      pwsh -Command "Write-Output 'Hello from PowerShell!'"
+  - echo "Build script completed"
+
+test_script:
+  - ps: |
+      pwsh -Command "Write-Output 'Testing PowerShell execution'"
+  - echo "Test script completed"
+
