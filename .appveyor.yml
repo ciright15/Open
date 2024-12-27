@@ -8,7 +8,7 @@ configuration:
   - Release
 
 environment:
-  PATH: C:\cygwin\bin;C:\Program Files\PowerShell\7;$(PATH)
+  PATH: C:\cygwin\bin;C:\Program Files\PowerShell\7;C:\Program Files\PowerShell\7-preview;$(PATH)
 
 init:
   - cmd: echo "Initialization step"
@@ -21,8 +21,9 @@ install:
           Start-Process msiexec.exe -ArgumentList '/i', 'pwsh.msi', '/quiet', '/norestart' -Wait;
           echo "PowerShell Core installed.";
       }
-      $env:PATH="C:\Program Files\PowerShell\7;$env:PATH";
+      $env:PATH="C:\Program Files\PowerShell\7;C:\Program Files\PowerShell\7-preview;$env:PATH";
       echo $env:PATH;
+  - pwsh -v
 
 build_script:
   - ps: |
@@ -33,4 +34,3 @@ test_script:
   - ps: |
       pwsh -Command "Write-Output 'Testing PowerShell execution'"
   - echo "Test script completed"
-
